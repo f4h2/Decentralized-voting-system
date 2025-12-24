@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-6cf350c49f83ddce530e564d92eece837ed7c2e8",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/Voting.sol": "project/contracts/Voting.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/Voting.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract Voting {\n    struct Poll {\n        string name;\n        string[] options;\n        mapping(uint => uint) votes; // optionIndex => voteCount\n        mapping(address => bool) hasVoted; // user => voted?\n        uint startTime;\n        uint endTime; // 0 nếu không có hạn\n        bool isActive;\n    }\n\n    mapping(uint => Poll) public polls;\n    uint public pollCount;\n    address public owner;\n\n    constructor() {\n        owner = msg.sender;\n    }\n\n    modifier onlyOwner() {\n        require(msg.sender == owner, \"Only owner can call this\");\n        _;\n    }\n\n    // Tạo poll với thời hạn (endTime là timestamp Unix)\n    function createPoll(string memory _name, string[] memory _options, uint _durationInSeconds) public onlyOwner {\n        pollCount++;\n        Poll storage newPoll = polls[pollCount];\n        newPoll.name = _name;\n        newPoll.options = _options;\n        newPoll.startTime = block.timestamp;\n        newPoll.endTime = block.timestamp + _durationInSeconds;\n        newPoll.isActive = true;\n    }\n\n    // Bỏ phiếu (kiểm tra active và thời hạn)\n    function vote(uint _pollId, uint _optionIndex) public {\n        require(_pollId > 0 && _pollId <= pollCount, \"Invalid poll ID\");\n        Poll storage poll = polls[_pollId];\n        require(poll.isActive && (poll.endTime == 0 || block.timestamp < poll.endTime), \"Poll is not active\");\n        require(!poll.hasVoted[msg.sender], \"Already voted\");\n        require(_optionIndex < poll.options.length, \"Invalid option\");\n\n        poll.votes[_optionIndex]++;\n        poll.hasVoted[msg.sender] = true;\n    }\n\n    // Kết thúc poll (only owner)\n    function endPoll(uint _pollId) public onlyOwner {\n        require(_pollId > 0 && _pollId <= pollCount, \"Invalid poll ID\");\n        Poll storage poll = polls[_pollId];\n        poll.isActive = false;\n    }\n\n    // Lấy kết quả poll\n    function getPollResults(uint _pollId) public view returns (string memory name, string[] memory options, uint[] memory voteCounts, uint startTime, uint endTime, bool isActive) {\n        require(_pollId > 0 && _pollId <= pollCount, \"Invalid poll ID\");\n        Poll storage poll = polls[_pollId];\n        uint[] memory counts = new uint[](poll.options.length);\n        for (uint i = 0; i < poll.options.length; i++) {\n            counts[i] = poll.votes[i];\n        }\n        return (poll.name, poll.options, counts, poll.startTime, poll.endTime, poll.isActive);\n    }\n\n    // Kiểm tra nếu user đã vote\n    function hasUserVoted(uint _pollId, address _user) public view returns (bool) {\n        require(_pollId > 0 && _pollId <= pollCount, \"Invalid poll ID\");\n        return polls[_pollId].hasVoted[_user];\n    }\n\n    // Lấy poll count\n    function getPollCount() public view returns (uint) {\n        return pollCount;\n    }\n}"
+      }
+    }
+  }
+}

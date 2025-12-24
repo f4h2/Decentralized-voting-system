@@ -1,0 +1,48 @@
+/* Based on https://github.com/tsconfig/bases/blob/501da2bcd640cf95c95805783e1012b992338f28/bases/node22.json */
+// {
+//   "compilerOptions": {
+//     "lib": ["es2023"],
+//     "module": "node16",
+//     "target": "es2022",
+//     "strict": true,
+//     "esModuleInterop": true,
+//     "skipLibCheck": true,
+//     "forceConsistentCasingInFileNames": true,
+//     "resolveJsonModule": true,
+//     "moduleResolution": "node16",
+//     "outDir": "dist"
+//   },
+//   "include": [
+//     "hardhat.config.ts",
+//     "ignition/**/*.ts",
+//     "test/**/*.ts",
+//     "scripts/**/*.ts"
+//   ],
+//   "exclude": [
+//     "node_modules",
+//     "dist"
+//   ]
+// }
+
+{
+  "compilerOptions": {
+    "lib": ["es2023"],
+    "target": "es2022",
+
+    "module": "esnext",
+    "moduleResolution": "bundler",
+
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "outDir": "dist"
+  },
+  "include": [
+    "hardhat.config.ts",
+    "ignition/**/*.ts",
+    "test/**/*.ts",
+    "scripts/**/*.ts"
+  ]
+}
