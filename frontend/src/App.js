@@ -1,39 +1,42 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAddress, useContract, useContractWrite, useContractRead, ConnectWallet } from '@thirdweb-dev/react';
+import { useAddress, useContract } from '@thirdweb-dev/react';
+import Header from './components/Header';
+import Footer from './components/Footer';
 import './App.css';
 
 function App() {
   const address = useAddress();
-  const { contract } = useContract("0x1f5A419D1eb892365d5aa0a2A0D109FA2613ff68");
-  
-  const [pollName, setPollName] = useState('');
-  const [options, setOptions] = useState('');
-  const [duration, setDuration] = useState(0);
-  const [polls, setPolls] = useState([]);
+  const { contract } = useContract("0xFE986Fc37a11eEA9BB41E76E0Ea48c2048764814"); // EventTicket contract deployed on Sepolia
+  // const { contract } = useContract("0x2B66A1911EC205c88897346a0741A19C633A6240"); 
+  // State management
+  const [activeTab, setActiveTab] = useState('events'); // 'events', 'my-tickets', 'admin'
+  const [events, setEvents] = useState([]);
+  const [myTickets, setMyTickets] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [activeTab, setActiveTab] = useState('active'); // 'active' hoặc 'ended'
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [showCreateEventForm, setShowCreateEventForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPoll, setSelectedPoll] = useState(null);
-  const [showPollDetails, setShowPollDetails] = useState(false);
+  const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
+  const [isAdmin, setIsAdmin] = useState(true); // Anyone can create events - no admin check needed
+  
+  // Notification & confirmation
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   const [confirmAction, setConfirmAction] = useState({ show: false, message: '', onConfirm: null });
-  const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
 
-  const { data: pollCount } = useContractRead(contract, "getPollCount");
-  const { mutateAsync: createPoll } = useContractWrite(contract, "createPoll");
-  const { mutateAsync: vote } = useContractWrite(contract, "vote");
-  const { mutateAsync: endPoll } = useContractWrite(contract, "endPoll");
-
-  // Update current time every second for countdown
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(Math.floor(Date.now() / 1000));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Notification system
+  // Form states for creating event
+  const [eventForm, setEventForm] = useState({
+    name: '',
+    description: '',
+    location: '',
+    imageUrl: '',
+    ticketPrice: '',
+    totalTickets: '',
+    eventDate: '',
+    saleEndDate: ''
+  });
+  
+  // Helper functions
   const showNotification = useCallback((message, type = 'info') => {
     setNotification({ show: true, message, type });
     setTimeout(() => {
@@ -41,65 +44,169 @@ function App() {
     }, 4000);
   }, []);
 
-  // Confirmation dialog
   const showConfirmDialog = useCallback((message, onConfirm) => {
     setConfirmAction({ show: true, message, onConfirm });
   }, []);
 
-  // Load all polls
+  // Update current time every second
   useEffect(() => {
-    if (contract && pollCount) {
-      const fetchPolls = async () => {
-        setLoading(true);
-        const pollList = [];
-        for (let i = 1; i <= pollCount; i++) {
-          try {
-            const results = await contract.call("getPollResults", [i]);
-            const hasVoted = address ? await contract.call("hasUserVoted", [i, address]) : false;
-            pollList.push({ id: i, ...results, hasVoted });
-          } catch (error) {
-            console.error(`Error fetching poll ${i}:`, error);
-          }
-        }
-        setPolls(pollList);
-        setLoading(false);
-      };
-      fetchPolls();
-    }
-  }, [contract, pollCount, address]);
+    const timer = setInterval(() => {
+      setCurrentTime(Math.floor(Date.now() / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const handleCreatePoll = async () => {
-    if (!pollName || !options || duration <= 0) {
-      showNotification('Vui lòng điền đầy đủ thông tin!', 'warning');
+  // Load all events
+  useEffect(() => {
+    if (contract) {
+      const fetchEvents = async () => {
+        try {
+          setLoading(true);
+          console.log("📚 Fetching eventCount...");
+          const count = await contract.call("eventCount", []);
+          console.log("📊 EventCount:", count?.toString());
+          
+          const eventList = [];
+          const eventCountNum = Number(count) || 0;
+          
+          for (let i = 1; i <= eventCountNum; i++) {
+            try {
+              const eventData = await contract.call("getEvent", [i]);
+              console.log(`✅ Event ${i} loaded:`, eventData[0]);
+              eventList.push({ id: i, ...eventData });
+            } catch (error) {
+              console.error(`❌ Error fetching event ${i}:`, error);
+            }
+          }
+          console.log(`✅ Total ${eventList.length} events loaded`);
+          setEvents(eventList);
+        } catch (error) {
+          console.error("❌ Error fetching events:", error);
+          setEvents([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchEvents();
+      // Reload events every 30 seconds
+      const interval = setInterval(fetchEvents, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [contract]);
+
+  // Load user's tickets
+  useEffect(() => {
+    if (contract && address) {
+      const fetchMyTickets = async () => {
+        try {
+          const ticketIds = await contract.call("getUserTickets", [address]);
+          const ticketList = [];
+          for (let ticketId of ticketIds) {
+            const ticketData = await contract.call("getTicket", [ticketId]);
+            const eventData = await contract.call("getEvent", [ticketData[0]]);
+            ticketList.push({ 
+              ticketId: Number(ticketId), 
+              ...ticketData,
+              eventName: eventData[0],
+              eventDate: eventData[7]
+            });
+          }
+          setMyTickets(ticketList);
+        } catch (error) {
+          console.error("Error fetching tickets:", error);
+        }
+      };
+      fetchMyTickets();
+    }
+  }, [contract, address]);
+
+  // Handle create event
+  const handleCreateEvent = async () => {
+    if (!eventForm.name || !eventForm.ticketPrice || !eventForm.totalTickets || !eventForm.eventDate) {
+      showNotification('Vui lòng điền đầy đủ thông tin bắt buộc!', 'warning');
       return;
     }
+
     try {
       setLoading(true);
-      await createPoll({ args: [pollName, options.split(',').map(o => o.trim()), duration] });
-      showNotification('✅ Tạo Poll thành công!', 'success');
-      setPollName('');
-      setOptions('');
-      setDuration(0);
-      setShowCreateForm(false);
+      const eventDateTimestamp = Math.floor(new Date(eventForm.eventDate).getTime() / 1000);
+      const saleEndTimestamp = eventForm.saleEndDate 
+        ? Math.floor(new Date(eventForm.saleEndDate).getTime() / 1000)
+        : eventDateTimestamp - 3600; // 1 hour before event
+
+      const ticketPriceWei = (parseFloat(eventForm.ticketPrice) * 1e18).toString();
+
+      console.log("📝 Creating event with params:", {
+        name: eventForm.name,
+        description: eventForm.description || "Sự kiện đặc biệt",
+        location: eventForm.location || "Chưa xác định",
+        imageUrl: eventForm.imageUrl || "https://via.placeholder.com/400x300",
+        ticketPrice: ticketPriceWei,
+        totalTickets: parseInt(eventForm.totalTickets),
+        eventDate: eventDateTimestamp,
+        saleEndDate: saleEndTimestamp
+      });
+
+      await contract.call("createEvent", [
+        eventForm.name,
+        eventForm.description || "Sự kiện đặc biệt",
+        eventForm.location || "Chưa xác định",
+        eventForm.imageUrl || "https://via.placeholder.com/400x300",
+        ticketPriceWei,
+        parseInt(eventForm.totalTickets),
+        eventDateTimestamp,
+        saleEndTimestamp
+      ]);
+
+      showNotification('✅ Tạo sự kiện thành công!', 'success');
+      setEventForm({
+        name: '',
+        description: '',
+        location: '',
+        imageUrl: '',
+        ticketPrice: '',
+        totalTickets: '',
+        eventDate: '',
+        saleEndDate: ''
+      });
+      setShowCreateEventForm(false);
+      
+      // Reload events after creating
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
-      console.error(error);
+      console.error("❌ Error creating event:", error);
       showNotification('❌ Lỗi: ' + (error.message || 'Không xác định'), 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVote = async (pollId, optionIdx, optionName) => {
+  // Handle purchase ticket
+  const handlePurchaseTicket = async (eventId, ticketPrice, eventName) => {
     showConfirmDialog(
-      `Bạn có chắc muốn bỏ phiếu cho "${optionName}"?`,
+      `Bạn có chắc muốn mua vé cho "${eventName}"?\nGiá vé: ${(Number(ticketPrice) / 1e18).toFixed(4)} ETH`,
       async () => {
         try {
           setLoading(true);
           setConfirmAction({ show: false, message: '', onConfirm: null });
-          await vote({ args: [pollId, optionIdx] });
-          showNotification('✅ Bỏ phiếu thành công!', 'success');
+          
+          console.log("🎫 Purchasing ticket for event:", eventId, "with price:", ticketPrice);
+          
+          await contract.call("purchaseTicket", [eventId], {
+            value: ticketPrice
+          });
+
+          showNotification('🎉 Mua vé thành công!', 'success');
+          
+          // Reload after purchase
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
         } catch (error) {
-          console.error(error);
+          console.error("❌ Error purchasing ticket:", error);
           showNotification('❌ Lỗi: ' + (error.message || 'Không xác định'), 'error');
         } finally {
           setLoading(false);
@@ -108,17 +215,26 @@ function App() {
     );
   };
 
-  const handleEndPoll = async (id) => {
+  // Handle cancel event
+  const handleCancelEvent = async (eventId) => {
     showConfirmDialog(
-      'Bạn có chắc muốn kết thúc poll này? Hành động này không thể hoàn tác!',
+      'Bạn có chắc muốn hủy sự kiện này? Hành động này không thể hoàn tác!',
       async () => {
         try {
           setLoading(true);
           setConfirmAction({ show: false, message: '', onConfirm: null });
-          await endPoll({ args: [id] });
-          showNotification('✅ Kết thúc Poll thành công!', 'success');
+          
+          console.log("🚫 Cancelling event:", eventId);
+          await contract.call("cancelEvent", [eventId]);
+          
+          showNotification('✅ Đã hủy sự kiện!', 'success');
+          
+          // Reload after cancel
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
         } catch (error) {
-          console.error(error);
+          console.error("❌ Error cancelling event:", error);
           showNotification('❌ Lỗi: ' + (error.message || 'Không xác định'), 'error');
         } finally {
           setLoading(false);
@@ -127,9 +243,9 @@ function App() {
     );
   };
 
-  const calculateTimeRemaining = (endTime) => {
-    if (endTime === 0) return { text: 'Không giới hạn', seconds: Infinity, urgent: false };
-    const remaining = endTime - currentTime;
+  // Calculate time remaining
+  const calculateTimeRemaining = (targetTime) => {
+    const remaining = targetTime - currentTime;
     if (remaining <= 0) return { text: 'Đã hết hạn', seconds: 0, urgent: false };
 
     const days = Math.floor(remaining / 86400);
@@ -138,227 +254,347 @@ function App() {
     const seconds = remaining % 60;
 
     let text = '';
-    if (days > 0) text = `${days} ngày ${hours} giờ ${minutes} phút`;
-    else if (hours > 0) text = `${hours} giờ ${minutes} phút ${seconds} giây`;
+    if (days > 0) text = `${days} ngày ${hours} giờ`;
+    else if (hours > 0) text = `${hours} giờ ${minutes} phút`;
     else if (minutes > 0) text = `${minutes} phút ${seconds} giây`;
     else text = `${seconds} giây`;
 
-    const urgent = remaining < 3600; // Less than 1 hour
+    const urgent = remaining < 86400; // Less than 1 day
     return { text, seconds: remaining, urgent };
   };
 
-  const getTotalVotes = (poll) => {
-    return poll[2].reduce((sum, votes) => sum + Number(votes), 0);
-  };
+  // Filter events
+  const filteredEvents = events.filter(event => {
+    if (!searchTerm) return true;
+    const lowerSearch = searchTerm.toLowerCase();
+    return event[0].toLowerCase().includes(lowerSearch) || 
+           event[1].toLowerCase().includes(lowerSearch) ||
+           event[2].toLowerCase().includes(lowerSearch);
+  });
 
-  const getPercentage = (votes, total) => {
-    if (total === 0) return 0;
-    return ((Number(votes) / total) * 100).toFixed(1);
-  };
-
-  // Lọc poll theo tab và tìm kiếm
-  const filteredPolls = polls
-    .filter(poll => {
-      const isActive = poll[5] && (poll[4] === 0 || poll[4] * 1000 > Date.now());
-      if (activeTab === 'active') return isActive;
-      if (activeTab === 'ended') return !isActive;
-      return true;
-    })
-    .filter(poll => {
-      if (!searchTerm) return true;
-      const lowerSearch = searchTerm.toLowerCase();
-      const pollNameMatch = poll[0].toLowerCase().includes(lowerSearch);
-      const optionsMatch = poll[1].some(opt => opt.toLowerCase().includes(lowerSearch));
-      return pollNameMatch || optionsMatch;
-    });
+  const activeEvents = filteredEvents.filter(e => e[9] && currentTime < e[8]);
+  // eslint-disable-next-line no-unused-vars
+  const pastEvents = filteredEvents.filter(e => !e[9] || currentTime >= e[7]);
 
   return (
     <div className="app-container">
-      <header className="app-header">
-        <div className="header-content">
-          <div className="logo-section">
-            <h1>🗳️ Decentralized Voting System</h1>
-            <p className="subtitle">Hệ thống bỏ phiếu phi tập trung trên Blockchain</p>
-          </div>
-          <div className="wallet-section">
-            <ConnectWallet theme="dark" />
-            {address && (
-              <div className="wallet-info">
-                <span className="wallet-label">Địa chỉ:</span>
-                <span className="wallet-address">{address.slice(0, 6)}...{address.slice(-4)}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+      <Header address={address} isAdmin={isAdmin} />
 
       <main className="main-content">
         {!address ? (
           <div className="welcome-card">
-            <div className="welcome-icon">🔐</div>
-            <h2>Chào mừng đến với Voting DApp</h2>
-            <p>Vui lòng kết nối ví MetaMask để bắt đầu</p>
+            <div className="welcome-icon">🎫</div>
+            <h2>Chào mừng đến với EventTicket DApp</h2>
+            <p>Vui lòng kết nối ví MetaMask để mua vé sự kiện</p>
             <div className="features">
-              <div className="feature"><span className="feature-icon">✅</span> Bỏ phiếu minh bạch</div>
+              <div className="feature"><span className="feature-icon">✅</span> Mua vé nhanh chóng</div>
               <div className="feature"><span className="feature-icon">🔒</span> An toàn & Bảo mật</div>
-              <div className="feature"><span className="feature-icon">⚡</span> Nhanh chóng & Đơn giản</div>
+              <div className="feature"><span className="feature-icon">⚡</span> Thanh toán blockchain</div>
             </div>
           </div>
         ) : (
           <>
-            {/* Create Poll Section */}
-            <div className="create-section">
-              <button className="toggle-create-btn" onClick={() => setShowCreateForm(!showCreateForm)}>
-                {showCreateForm ? '❌ Đóng' : '➕ Tạo Poll Mới'}
+            {/* Navigation Tabs */}
+            <div className="main-tabs">
+              <button 
+                className={`main-tab ${activeTab === 'events' ? 'active' : ''}`}
+                onClick={() => setActiveTab('events')}
+              >
+                🎪 Sự kiện ({activeEvents.length})
               </button>
-              {showCreateForm && (
-                <div className="create-form">
-                  <h2>📝 Tạo Poll Mới (Chỉ Owner)</h2>
-                  <div className="form-group">
-                    <label>Tên Poll</label>
-                    <input type="text" placeholder="Ví dụ: Bầu chọn công nghệ yêu thích" value={pollName} onChange={(e) => setPollName(e.target.value)} />
-                  </div>
-                  <div className="form-group">
-                    <label>Các lựa chọn (phân cách bằng dấu phẩy)</label>
-                    <input type="text" placeholder="Ví dụ: React, Vue, Angular" value={options} onChange={(e) => setOptions(e.target.value)} />
-                  </div>
-                  <div className="form-group">
-                    <label>Thời hạn (giây)</label>
-                    <input type="number" placeholder="Ví dụ: 86400 (1 ngày)" value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
-                    <small>1 giờ = 3600s, 1 ngày = 86400s, 1 tuần = 604800s</small>
-                  </div>
-                  <button className="create-btn" onClick={handleCreatePoll} disabled={loading}>
-                    {loading ? '⏳ Đang xử lý...' : '🚀 Tạo Poll'}
-                  </button>
-                </div>
+              <button 
+                className={`main-tab ${activeTab === 'my-tickets' ? 'active' : ''}`}
+                onClick={() => setActiveTab('my-tickets')}
+              >
+                🎟️ Vé của tôi ({myTickets.length})
+              </button>
+              {isAdmin && (
+                <button 
+                  className={`main-tab ${activeTab === 'admin' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('admin')}
+                >
+                  ➕ Tạo sự kiện
+                </button>
               )}
             </div>
 
-            {/* Tabs & Search */}
-            <div className="polls-section">
-              <div className="tabs-header">
-                <div className="tabs">
-                  <button
-                    className={`tab-btn ${activeTab === 'active' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('active')}
-                  >
-                    🟢 Đang diễn ra ({polls.filter(p => p[5] && (p[4] === 0 || p[4] * 1000 > Date.now())).length})
-                  </button>
-                  <button
-                    className={`tab-btn ${activeTab === 'ended' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('ended')}
-                  >
-                    🔴 Đã kết thúc ({polls.filter(p => !p[5] || (p[4] !== 0 && p[4] * 1000 <= Date.now())).length})
-                  </button>
+            {/* Events Tab */}
+            {activeTab === 'events' && (
+              <div className="events-section">
+                <div className="section-header">
+                  <h2>🎪 Sự kiện sắp diễn ra</h2>
+                  <div className="search-box">
+                    <input
+                      type="text"
+                      placeholder="🔍 Tìm kiếm sự kiện..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div className="search-box">
-                  <input
-                    type="text"
-                    placeholder="🔍 Tìm kiếm poll..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
+
+                {loading && events.length === 0 ? (
+                  <div className="loading">⏳ Đang tải sự kiện...</div>
+                ) : activeEvents.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">📭</div>
+                    <p>Hiện tại chưa có sự kiện nào đang mở bán vé</p>
+                  </div>
+                ) : (
+                  <div className="events-grid">
+                    {activeEvents.map((event) => {
+                      const timeToEvent = calculateTimeRemaining(event[7]);
+                      const timeToSaleEnd = calculateTimeRemaining(event[8]);
+                      const ticketsLeft = Number(event[5]) - Number(event[6]);
+                      const soldPercentage = (Number(event[6]) / Number(event[5])) * 100;
+
+                      return (
+                        <div key={event.id} className="event-card">
+                          <div className="event-image" style={{ backgroundImage: `url(${event[3]})` }}>
+                            <div className="event-badge">{ticketsLeft} vé còn lại</div>
+                          </div>
+                          <div className="event-content">
+                            <h3 className="event-title">{event[0]}</h3>
+                            <p className="event-description">{event[1]}</p>
+                            
+                            <div className="event-info">
+                              <div className="info-row">
+                                <span className="info-icon">📍</span>
+                                <span>{event[2]}</span>
+                              </div>
+                              <div className="info-row">
+                                <span className="info-icon">📅</span>
+                                <span>{new Date(Number(event[7]) * 1000).toLocaleString('vi-VN')}</span>
+                              </div>
+                              <div className={`info-row ${timeToSaleEnd.urgent ? 'urgent' : ''}`}>
+                                <span className="info-icon">⏰</span>
+                                <span>Bán vé còn: {timeToSaleEnd.text}</span>
+                              </div>
+                            </div>
+
+                            <div className="ticket-progress">
+                              <div className="progress-header">
+                                <span>Đã bán: {Number(event[6])}/{Number(event[5])}</span>
+                                <span>{soldPercentage.toFixed(0)}%</span>
+                              </div>
+                              <div className="progress-bar">
+                                <div className="progress-fill" style={{ width: `${soldPercentage}%` }}></div>
+                              </div>
+                            </div>
+
+                            <div className="event-footer">
+                              <div className="event-price">
+                                💰 {(Number(event[4]) / 1e18).toFixed(4)} ETH
+                              </div>
+                              <div className="event-actions">
+                                <button 
+                                  className="btn-details"
+                                  onClick={() => {
+                                    setSelectedEvent(event);
+                                    setShowEventModal(true);
+                                  }}
+                                >
+                                  Chi tiết
+                                </button>
+                                <button 
+                                  className="btn-buy"
+                                  onClick={() => handlePurchaseTicket(event.id, event[4], event[0])}
+                                  disabled={loading || ticketsLeft === 0}
+                                >
+                                  {ticketsLeft === 0 ? 'Hết vé' : '🎫 Mua vé'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
+            )}
 
-              <h2>📊 Danh Sách Polls</h2>
-
-              {loading && polls.length === 0 ? (
-                <div className="loading">⏳ Đang tải polls...</div>
-              ) : filteredPolls.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">📭</div>
-                  <p>
-                    {searchTerm 
-                      ? 'Không tìm thấy poll nào phù hợp với từ khóa tìm kiếm.' 
-                      : activeTab === 'active' 
-                        ? 'Hiện tại chưa có poll nào đang diễn ra.' 
-                        : 'Chưa có poll nào đã kết thúc.'
-                    }
-                  </p>
-                </div>
-              ) : (
-                <div className="polls-grid">
-                  {filteredPolls.map((poll) => {
-                    const totalVotes = getTotalVotes(poll);
-                    const isActive = poll[5] && (poll[4] === 0 || poll[4] * 1000 > Date.now());
-                    const timeRemaining = calculateTimeRemaining(poll[4]);
-                    const winningOption = poll[2].reduce((max, votes, idx, arr) => 
-                      Number(votes) > Number(arr[max]) ? idx : max, 0);
-
-                    return (
-                      <div key={poll.id} className={`poll-card ${!isActive ? 'inactive' : ''}`}>
-                        <div className="poll-header">
-                          <h3>
-                            <span className="poll-number">#{poll.id}</span> {poll[0]}
-                          </h3>
-                          <span className={`status-badge ${isActive ? 'active' : 'ended'}`}>
-                            {isActive ? '🟢 Đang diễn ra' : '🔴 Đã kết thúc'}
+            {/* My Tickets Tab */}
+            {activeTab === 'my-tickets' && (
+              <div className="tickets-section">
+                <h2>🎟️ Vé của tôi</h2>
+                {myTickets.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">🎫</div>
+                    <p>Bạn chưa mua vé nào</p>
+                  </div>
+                ) : (
+                  <div className="tickets-grid">
+                    {myTickets.map((ticket) => (
+                      <div key={ticket.ticketId} className={`ticket-card ${ticket[4] ? 'used' : ''}`}>
+                        <div className="ticket-header">
+                          <h3>Vé #{ticket.ticketId}</h3>
+                          <span className={`ticket-status ${ticket[4] ? 'used' : 'valid'}`}>
+                            {ticket[4] ? '✓ Đã sử dụng' : '✓ Hợp lệ'}
                           </span>
                         </div>
-                        <div className="poll-meta">
-                          <div className={`meta-item ${timeRemaining.urgent ? 'urgent' : ''}`}>
-                            ⏰ Thời gian còn lại: <span className={timeRemaining.urgent ? 'time-urgent' : ''}>{timeRemaining.text}</span>
+                        <div className="ticket-body">
+                          <div className="ticket-info">
+                            <strong>🎪 Sự kiện:</strong> {ticket.eventName}
                           </div>
-                          <div className="meta-item">📊 Tổng số phiếu: <span>{totalVotes}</span></div>
-                          <div className="meta-item">🗓️ Bắt đầu: <span>{new Date(poll[3] * 1000).toLocaleDateString('vi-VN')}</span></div>
-                          {poll[4] !== 0 && <div className="meta-item">🏁 Kết thúc: <span>{new Date(poll[4] * 1000).toLocaleString('vi-VN')}</span></div>}
-                        </div>
-                        <div className="options-list">
-                          {poll[1].map((opt, i) => {
-                            const votes = Number(poll[2][i]);
-                            const percentage = getPercentage(votes, totalVotes);
-                            const isWinning = i === winningOption && totalVotes > 0;
-                            return (
-                              <div key={i} className={`option-item ${isWinning ? 'winning-option' : ''}`}>
-                                <div className="option-header">
-                                  <span className="option-name">
-                                    {isWinning && '🏆 '}{opt}
-                                  </span>
-                                  <span className="option-stats">{votes} phiếu ({percentage}%)</span>
-                                </div>
-                                <div className="progress-bar">
-                                  <div className="progress-fill" style={{ width: `${percentage}%` }}></div>
-                                </div>
-                                {isActive && !poll.hasVoted && (
-                                  <button className="vote-btn" onClick={() => handleVote(poll.id, i, opt)} disabled={loading}>
-                                    ✓ Bỏ phiếu
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div className="poll-footer">
-                          <button 
-                            className="view-details-btn" 
-                            onClick={() => {
-                              setSelectedPoll(poll);
-                              setShowPollDetails(true);
-                            }}
-                          >
-                            👁️ Xem chi tiết
-                          </button>
-                          {poll.hasVoted && <div className="voted-badge">✅ Bạn đã bỏ phiếu</div>}
-                          {isActive && (
-                            <button className="end-poll-btn" onClick={() => handleEndPoll(poll.id)} disabled={loading}>
-                              🛑 Kết thúc Poll
-                            </button>
-                          )}
+                          <div className="ticket-info">
+                            <strong>📅 Ngày diễn ra:</strong> {new Date(Number(ticket.eventDate) * 1000).toLocaleString('vi-VN')}
+                          </div>
+                          <div className="ticket-info">
+                            <strong>🛒 Ngày mua:</strong> {new Date(Number(ticket[2]) * 1000).toLocaleString('vi-VN')}
+                          </div>
+                          <div className="ticket-code">
+                            <strong>🔖 Mã vé:</strong>
+                            <code>{ticket[3]}</code>
+                          </div>
                         </div>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Create Event Tab */}
+            {activeTab === 'admin' && isAdmin && (
+              <div className="admin-section">
+                <div className="admin-header">
+                  <h2>➕ Tạo sự kiện mới</h2>
+                  <button 
+                    className="btn-create-event"
+                    onClick={() => setShowCreateEventForm(!showCreateEventForm)}
+                  >
+                    {showCreateEventForm ? '❌ Đóng' : '📝 Điền thông tin'}
+                  </button>
                 </div>
-              )}
-            </div>
+
+                {showCreateEventForm && (
+                  <div className="create-event-form">
+                    <h3>📝 Tạo sự kiện mới</h3>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>Tên sự kiện *</label>
+                        <input
+                          type="text"
+                          placeholder="VD: Concert 2026"
+                          value={eventForm.name}
+                          onChange={(e) => setEventForm({...eventForm, name: e.target.value})}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Địa điểm</label>
+                        <input
+                          type="text"
+                          placeholder="VD: Sân vận động Mỹ Đình"
+                          value={eventForm.location}
+                          onChange={(e) => setEventForm({...eventForm, location: e.target.value})}
+                        />
+                      </div>
+                      <div className="form-group full-width">
+                        <label>Mô tả</label>
+                        <textarea
+                          placeholder="Mô tả chi tiết về sự kiện..."
+                          value={eventForm.description}
+                          onChange={(e) => setEventForm({...eventForm, description: e.target.value})}
+                          rows="3"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>URL hình ảnh</label>
+                        <input
+                          type="text"
+                          placeholder="https://..."
+                          value={eventForm.imageUrl}
+                          onChange={(e) => setEventForm({...eventForm, imageUrl: e.target.value})}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Giá vé (ETH) *</label>
+                        <input
+                          type="number"
+                          step="0.001"
+                          placeholder="0.1"
+                          value={eventForm.ticketPrice}
+                          onChange={(e) => setEventForm({...eventForm, ticketPrice: e.target.value})}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Số lượng vé *</label>
+                        <input
+                          type="number"
+                          placeholder="1000"
+                          value={eventForm.totalTickets}
+                          onChange={(e) => setEventForm({...eventForm, totalTickets: e.target.value})}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Ngày diễn ra sự kiện *</label>
+                        <input
+                          type="datetime-local"
+                          value={eventForm.eventDate}
+                          onChange={(e) => setEventForm({...eventForm, eventDate: e.target.value})}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Ngày kết thúc bán vé</label>
+                        <input
+                          type="datetime-local"
+                          value={eventForm.saleEndDate}
+                          onChange={(e) => setEventForm({...eventForm, saleEndDate: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    <button 
+                      className="btn-submit"
+                      onClick={handleCreateEvent}
+                      disabled={loading}
+                    >
+                      {loading ? '⏳ Đang xử lý...' : '🚀 Tạo sự kiện'}
+                    </button>
+                  </div>
+                )}
+
+                <div className="admin-events-list">
+                  <h3>📋 Danh sách sự kiện</h3>
+                  {events.length === 0 ? (
+                    <div className="empty-state">
+                      <p>Chưa có sự kiện nào</p>
+                    </div>
+                  ) : (
+                    <div className="admin-table">
+                      {events.map((event) => (
+                        <div key={event.id} className="admin-event-row">
+                          <div className="admin-event-info">
+                            <h4>{event[0]}</h4>
+                            <p>📍 {event[2]} | 📅 {new Date(Number(event[7]) * 1000).toLocaleDateString('vi-VN')}</p>
+                            <p>🎫 Đã bán: {Number(event[6])}/{Number(event[5])} | 💰 {(Number(event[4]) / 1e18).toFixed(4)} ETH</p>
+                          </div>
+                          <div className="admin-event-actions">
+                            <span className={`status-badge ${event[9] ? 'active' : 'inactive'}`}>
+                              {event[9] ? '🟢 Hoạt động' : '🔴 Đã hủy'}
+                            </span>
+                            {event[9] && (
+                              <button 
+                                className="btn-cancel-event"
+                                onClick={() => handleCancelEvent(event.id)}
+                                disabled={loading}
+                              >
+                                Hủy sự kiện
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </>
         )}
       </main>
 
-      <footer className="app-footer">
-        <p>Powered by Ethereum Smart Contracts • Built with React & ThirdWeb</p>
-      </footer>
+      <Footer />
 
       {/* Notification Toast */}
       {notification.show && (
@@ -387,7 +623,7 @@ function App() {
               <button className="modal-close" onClick={() => setConfirmAction({ show: false, message: '', onConfirm: null })}>✕</button>
             </div>
             <div className="modal-body">
-              <p>{confirmAction.message}</p>
+              <p style={{ whiteSpace: 'pre-line' }}>{confirmAction.message}</p>
             </div>
             <div className="modal-footer">
               <button className="btn-cancel" onClick={() => setConfirmAction({ show: false, message: '', onConfirm: null })}>
@@ -401,90 +637,59 @@ function App() {
         </div>
       )}
 
-      {/* Poll Details Modal */}
-      {showPollDetails && selectedPoll && (
-        <div className="modal-overlay" onClick={() => setShowPollDetails(false)}>
-          <div className="modal-content poll-details-modal" onClick={(e) => e.stopPropagation()}>
+      {/* Event Details Modal */}
+      {showEventModal && selectedEvent && (
+        <div className="modal-overlay" onClick={() => setShowEventModal(false)}>
+          <div className="modal-content event-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>📊 Chi tiết Poll #{selectedPoll.id}</h3>
-              <button className="modal-close" onClick={() => setShowPollDetails(false)}>✕</button>
+              <h3>🎪 Chi tiết sự kiện</h3>
+              <button className="modal-close" onClick={() => setShowEventModal(false)}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="detail-section">
-                <h4>📝 Tên Poll</h4>
-                <p className="poll-title-large">{selectedPoll[0]}</p>
-              </div>
+              <img src={selectedEvent[3]} alt={selectedEvent[0]} className="modal-event-image" />
+              <h2>{selectedEvent[0]}</h2>
+              <p className="event-description-full">{selectedEvent[1]}</p>
               
-              <div className="detail-section">
-                <h4>⏰ Thông tin thời gian</h4>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <span className="info-label">Bắt đầu:</span>
-                    <span className="info-value">{new Date(selectedPoll[3] * 1000).toLocaleString('vi-VN')}</span>
-                  </div>
-                  {selectedPoll[4] !== 0 && (
-                    <div className="info-item">
-                      <span className="info-label">Kết thúc:</span>
-                      <span className="info-value">{new Date(selectedPoll[4] * 1000).toLocaleString('vi-VN')}</span>
-                    </div>
-                  )}
-                  <div className="info-item">
-                    <span className="info-label">Còn lại:</span>
-                    <span className={`info-value ${calculateTimeRemaining(selectedPoll[4]).urgent ? 'time-urgent' : ''}`}>
-                      {calculateTimeRemaining(selectedPoll[4]).text}
-                    </span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Trạng thái:</span>
-                    <span className="info-value">
-                      {selectedPoll[5] && (selectedPoll[4] === 0 || selectedPoll[4] * 1000 > Date.now()) 
-                        ? '🟢 Đang diễn ra' 
-                        : '🔴 Đã kết thúc'}
-                    </span>
-                  </div>
+              <div className="event-details-grid">
+                <div className="detail-item">
+                  <strong>📍 Địa điểm:</strong>
+                  <span>{selectedEvent[2]}</span>
+                </div>
+                <div className="detail-item">
+                  <strong>📅 Ngày diễn ra:</strong>
+                  <span>{new Date(Number(selectedEvent[7]) * 1000).toLocaleString('vi-VN')}</span>
+                </div>
+                <div className="detail-item">
+                  <strong>⏰ Kết thúc bán vé:</strong>
+                  <span>{new Date(Number(selectedEvent[8]) * 1000).toLocaleString('vi-VN')}</span>
+                </div>
+                <div className="detail-item">
+                  <strong>💰 Giá vé:</strong>
+                  <span>{(Number(selectedEvent[4]) / 1e18).toFixed(4)} ETH</span>
+                </div>
+                <div className="detail-item">
+                  <strong>🎫 Tổng số vé:</strong>
+                  <span>{Number(selectedEvent[5])}</span>
+                </div>
+                <div className="detail-item">
+                  <strong>✓ Đã bán:</strong>
+                  <span>{Number(selectedEvent[6])}</span>
                 </div>
               </div>
-
-              <div className="detail-section">
-                <h4>📊 Kết quả bỏ phiếu</h4>
-                <div className="results-chart">
-                  {selectedPoll[1].map((opt, i) => {
-                    const votes = Number(selectedPoll[2][i]);
-                    const total = getTotalVotes(selectedPoll);
-                    const percentage = getPercentage(votes, total);
-                    const winningIdx = selectedPoll[2].reduce((max, v, idx, arr) => 
-                      Number(v) > Number(arr[max]) ? idx : max, 0);
-                    const isWinning = i === winningIdx && total > 0;
-                    
-                    return (
-                      <div key={i} className={`result-bar ${isWinning ? 'winning' : ''}`}>
-                        <div className="result-info">
-                          <span className="result-name">{isWinning && '🏆 '}{opt}</span>
-                          <span className="result-stats">{votes} phiếu ({percentage}%)</span>
-                        </div>
-                        <div className="result-progress">
-                          <div className="result-fill" style={{ width: `${percentage}%` }}>
-                            <span className="result-percentage">{percentage}%</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="total-votes-display">
-                  <strong>Tổng số phiếu bầu:</strong> {getTotalVotes(selectedPoll)}
-                </div>
-              </div>
-
-              {selectedPoll.hasVoted && (
-                <div className="detail-section voted-section">
-                  <div className="voted-indicator">✅ Bạn đã bỏ phiếu trong poll này</div>
-                </div>
-              )}
             </div>
             <div className="modal-footer">
-              <button className="btn-close" onClick={() => setShowPollDetails(false)}>
+              <button className="btn-close" onClick={() => setShowEventModal(false)}>
                 Đóng
+              </button>
+              <button 
+                className="btn-buy-modal"
+                onClick={() => {
+                  setShowEventModal(false);
+                  handlePurchaseTicket(selectedEvent.id, selectedEvent[4], selectedEvent[0]);
+                }}
+                disabled={loading || (Number(selectedEvent[5]) - Number(selectedEvent[6])) === 0}
+              >
+                🎫 Mua vé
               </button>
             </div>
           </div>
