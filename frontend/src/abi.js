@@ -5,63 +5,43 @@ export const EventTicketABI = [{"inputs":[],"stateMutability":"nonpayable","type
 export const EventTicketNFTABI = [
   // Constructor
   {"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
-  
-  // Events
-  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"eventId","type":"uint256"},{"indexed":false,"internalType":"string","name":"name","type":"string"},{"indexed":false,"internalType":"address","name":"organizer","type":"address"}],"name":"EventCreated","type":"event"},
-  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"eventId","type":"uint256"}],"name":"EventUpdated","type":"event"},
-  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"eventId","type":"uint256"}],"name":"EventCancelled","type":"event"},
-  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":true,"internalType":"uint256","name":"eventId","type":"uint256"},{"indexed":false,"internalType":"address","name":"buyer","type":"address"},{"indexed":false,"internalType":"uint8","name":"ticketType","type":"uint8"}],"name":"TicketPurchased","type":"event"},
-  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"address","name":"from","type":"address"},{"indexed":false,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"price","type":"uint256"}],"name":"TicketTransferred","type":"event"},
-  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"address","name":"owner","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"TicketRefunded","type":"event"},
-  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":true,"internalType":"uint256","name":"eventId","type":"uint256"},{"indexed":false,"internalType":"address","name":"verifier","type":"address"}],"name":"TicketUsed","type":"event"},
-  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"bool","name":"isValid","type":"bool"},{"indexed":false,"internalType":"string","name":"message","type":"string"}],"name":"TicketVerified","type":"event"},
-  
-  // ERC721 Events
+
+  // Errors (sắp xếp theo alphabet)
+  {"inputs":[],"name":"ERC721EnumerableForbiddenBatchMint","type":"error"},
+  {"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"address","name":"owner","type":"address"}],"name":"ERC721IncorrectOwner","type":"error"},
+  {"inputs":[{"internalType":"address","name":"operator","type":"address"},{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"ERC721InsufficientApproval","type":"error"},
+  {"inputs":[{"internalType":"address","name":"approver","type":"address"}],"name":"ERC721InvalidApprover","type":"error"},
+  {"inputs":[{"internalType":"address","name":"operator","type":"address"}],"name":"ERC721InvalidOperator","type":"error"},
+  {"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"ERC721InvalidOwner","type":"error"},
+  {"inputs":[{"internalType":"address","name":"receiver","type":"address"}],"name":"ERC721InvalidReceiver","type":"error"},
+  {"inputs":[{"internalType":"address","name":"sender","type":"address"}],"name":"ERC721InvalidSender","type":"error"},
+  {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"ERC721NonexistentToken","type":"error"},
+  {"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"uint256","name":"index","type":"uint256"}],"name":"ERC721OutOfBoundsIndex","type":"error"},
+  {"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"OwnableInvalidOwner","type":"error"},
+  {"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"OwnableUnauthorizedAccount","type":"error"},
+  {"inputs":[],"name":"ReentrancyGuardReentrantCall","type":"error"},
+
+  // Events (sắp xếp theo alphabet)
   {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"approved","type":"address"},{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"Approval","type":"event"},
   {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"operator","type":"address"},{"indexed":false,"internalType":"bool","name":"approved","type":"bool"}],"name":"ApprovalForAll","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"_fromTokenId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"_toTokenId","type":"uint256"}],"name":"BatchMetadataUpdate","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"eventId","type":"uint256"}],"name":"EventCancelled","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"eventId","type":"uint256"},{"indexed":false,"internalType":"string","name":"name","type":"string"},{"indexed":false,"internalType":"address","name":"organizer","type":"address"}],"name":"EventCreated","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"eventId","type":"uint256"}],"name":"EventUpdated","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"_tokenId","type":"uint256"}],"name":"MetadataUpdate","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":true,"internalType":"uint256","name":"eventId","type":"uint256"},{"indexed":false,"internalType":"address","name":"buyer","type":"address"},{"indexed":false,"internalType":"enum EventTicketNFT.TicketType","name":"ticketType","type":"uint8"}],"name":"TicketPurchased","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"address","name":"owner","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"TicketRefunded","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"address","name":"from","type":"address"},{"indexed":false,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"price","type":"uint256"}],"name":"TicketTransferred","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":true,"internalType":"uint256","name":"eventId","type":"uint256"},{"indexed":false,"internalType":"address","name":"verifier","type":"address"}],"name":"TicketUsed","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"bool","name":"isValid","type":"bool"},{"indexed":false,"internalType":"string","name":"message","type":"string"}],"name":"TicketVerified","type":"event"},
   {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"Transfer","type":"event"},
-  
+
   // Constants
-  {"inputs":[],"name":"PLATFORM_FEE_PERCENT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
   {"inputs":[],"name":"MAX_RESALE_MARKUP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-  
-  // Event Management
-  {"inputs":[{"internalType":"string","name":"_name","type":"string"},{"internalType":"string","name":"_description","type":"string"},{"internalType":"string","name":"_location","type":"string"},{"internalType":"string","name":"_imageUrl","type":"string"},{"internalType":"uint256","name":"_eventDate","type":"uint256"},{"internalType":"uint256","name":"_saleStartDate","type":"uint256"},{"internalType":"uint256","name":"_saleEndDate","type":"uint256"},{"internalType":"uint256","name":"_refundDeadline","type":"uint256"},{"internalType":"uint256[3]","name":"_ticketPrices","type":"uint256[3]"},{"internalType":"uint256[3]","name":"_ticketSupplies","type":"uint256[3]"},{"internalType":"string[3]","name":"_ticketBenefits","type":"string[3]"}],"name":"createEvent","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},
-  {"inputs":[{"internalType":"uint256","name":"_eventId","type":"uint256"}],"name":"cancelEvent","outputs":[],"stateMutability":"nonpayable","type":"function"},
-  
-  // Ticket Purchase
-  {"inputs":[{"internalType":"uint256","name":"_eventId","type":"uint256"},{"internalType":"uint8","name":"_ticketType","type":"uint8"},{"internalType":"string","name":"_seatInfo","type":"string"}],"name":"purchaseTicket","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"payable","type":"function"},
-  
-  // Ticket Transfer
-  {"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"},{"internalType":"address","name":"_to","type":"address"}],"name":"transferTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
-  {"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"},{"internalType":"address","name":"_buyer","type":"address"}],"name":"resellTicket","outputs":[],"stateMutability":"payable","type":"function"},
-  
-  // Refund
-  {"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"}],"name":"refundTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
-  
-  // QR Verification
-  {"inputs":[{"internalType":"string","name":"_qrHash","type":"string"}],"name":"verifyTicketByQR","outputs":[{"internalType":"bool","name":"isValid","type":"bool"},{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"uint256","name":"eventId","type":"uint256"},{"internalType":"string","name":"eventName","type":"string"},{"internalType":"string","name":"ticketTypeName","type":"string"},{"internalType":"address","name":"currentOwner","type":"address"},{"internalType":"string","name":"message","type":"string"}],"stateMutability":"view","type":"function"},
-  {"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"}],"name":"useTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
-  {"inputs":[{"internalType":"string","name":"_qrHash","type":"string"}],"name":"verifyAndUseTicket","outputs":[{"internalType":"bool","name":"success","type":"bool"},{"internalType":"string","name":"message","type":"string"}],"stateMutability":"nonpayable","type":"function"},
-  
-  // View Functions
-  {"inputs":[{"internalType":"uint256","name":"_eventId","type":"uint256"}],"name":"getEvent","outputs":[{"internalType":"string","name":"name","type":"string"},{"internalType":"string","name":"description","type":"string"},{"internalType":"string","name":"location","type":"string"},{"internalType":"string","name":"imageUrl","type":"string"},{"internalType":"uint256","name":"eventDate","type":"uint256"},{"internalType":"uint256","name":"saleStartDate","type":"uint256"},{"internalType":"uint256","name":"saleEndDate","type":"uint256"},{"internalType":"uint256","name":"refundDeadline","type":"uint256"},{"internalType":"address","name":"organizer","type":"address"},{"internalType":"bool","name":"isActive","type":"bool"},{"internalType":"bool","name":"isCancelled","type":"bool"},{"internalType":"uint256","name":"totalRevenue","type":"uint256"}],"stateMutability":"view","type":"function"},
-  {"inputs":[{"internalType":"uint256","name":"_eventId","type":"uint256"},{"internalType":"uint8","name":"_type","type":"uint8"}],"name":"getTicketTypeInfo","outputs":[{"internalType":"string","name":"name","type":"string"},{"internalType":"uint256","name":"price","type":"uint256"},{"internalType":"uint256","name":"totalSupply","type":"uint256"},{"internalType":"uint256","name":"sold","type":"uint256"},{"internalType":"string","name":"benefits","type":"string"},{"internalType":"bool","name":"isActive","type":"bool"}],"stateMutability":"view","type":"function"},
-  {"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"}],"name":"getTicket","outputs":[{"internalType":"uint256","name":"eventId","type":"uint256"},{"internalType":"uint8","name":"ticketType","type":"uint8"},{"internalType":"address","name":"originalBuyer","type":"address"},{"internalType":"uint256","name":"purchaseDate","type":"uint256"},{"internalType":"uint256","name":"purchasePrice","type":"uint256"},{"internalType":"string","name":"qrCodeHash","type":"string"},{"internalType":"uint8","name":"status","type":"uint8"},{"internalType":"string","name":"seatInfo","type":"string"}],"stateMutability":"view","type":"function"},
-  {"inputs":[{"internalType":"address","name":"_user","type":"address"}],"name":"getUserTickets","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},
-  {"inputs":[{"internalType":"uint256","name":"_eventId","type":"uint256"}],"name":"getEventTickets","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},
-  {"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"}],"name":"getTransferHistory","outputs":[{"components":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"price","type":"uint256"}],"internalType":"struct EventTicketNFT.TransferHistory[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},
-  {"inputs":[],"name":"getEventCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-  {"inputs":[],"name":"getTicketCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-  {"inputs":[],"name":"getContractBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-  {"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"qrCodeToTicket","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-  
-  // Owner Functions
-  {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
-  {"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
-  {"inputs":[{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"withdrawAmount","outputs":[],"stateMutability":"nonpayable","type":"function"},
-  
-  // ERC721 Functions
+  {"inputs":[],"name":"PLATFORM_FEE_PERCENT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+
+  // Standard ERC721 functions
   {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"approve","outputs":[],"stateMutability":"nonpayable","type":"function"},
   {"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
   {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"getApproved","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
@@ -73,13 +53,58 @@ export const EventTicketNFTABI = [
   {"inputs":[{"internalType":"address","name":"operator","type":"address"},{"internalType":"bool","name":"approved","type":"bool"}],"name":"setApprovalForAll","outputs":[],"stateMutability":"nonpayable","type":"function"},
   {"inputs":[{"internalType":"bytes4","name":"interfaceId","type":"bytes4"}],"name":"supportsInterface","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
   {"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"tokenURI","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"transferFrom","outputs":[],"stateMutability":"nonpayable","type":"function"},
+
+  // Custom functions - Event management
+  {"inputs":[{"internalType":"uint256","name":"_eventId","type":"uint256"}],"name":"cancelEvent","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"components":[{"internalType":"string","name":"name","type":"string"},{"internalType":"string","name":"description","type":"string"},{"internalType":"string","name":"location","type":"string"},{"internalType":"string","name":"imageUrl","type":"string"}],"internalType":"struct EventTicketNFT.EventParams","name":"_params","type":"tuple"},{"components":[{"internalType":"uint256","name":"eventDate","type":"uint256"},{"internalType":"uint256","name":"saleStartDate","type":"uint256"},{"internalType":"uint256","name":"saleEndDate","type":"uint256"},{"internalType":"uint256","name":"refundDeadline","type":"uint256"}],"internalType":"struct EventTicketNFT.EventDates","name":"_dates","type":"tuple"},{"components":[{"internalType":"uint256","name":"price","type":"uint256"},{"internalType":"uint256","name":"supply","type":"uint256"},{"internalType":"string","name":"benefits","type":"string"}],"internalType":"struct EventTicketNFT.TicketConfig[3]","name":"_tickets","type":"tuple[3]"}],"name":"createEvent","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},
+
+  // View functions - Event info
+  {"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"events","outputs":[{"internalType":"string","name":"name","type":"string"},{"internalType":"string","name":"description","type":"string"},{"internalType":"string","name":"location","type":"string"},{"internalType":"string","name":"imageUrl","type":"string"},{"internalType":"uint256","name":"eventDate","type":"uint256"},{"internalType":"uint256","name":"saleStartDate","type":"uint256"},{"internalType":"uint256","name":"saleEndDate","type":"uint256"},{"internalType":"uint256","name":"refundDeadline","type":"uint256"},{"internalType":"address","name":"organizer","type":"address"},{"internalType":"bool","name":"isActive","type":"bool"},{"internalType":"bool","name":"isCancelled","type":"bool"},{"internalType":"uint256","name":"totalRevenue","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"getContractBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"getEventCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"_eventId","type":"uint256"}],"name":"getEventBasicInfo","outputs":[{"internalType":"string","name":"name","type":"string"},{"internalType":"string","name":"description","type":"string"},{"internalType":"string","name":"location","type":"string"},{"internalType":"string","name":"imageUrl","type":"string"},{"internalType":"uint256","name":"eventDate","type":"uint256"},{"internalType":"address","name":"organizer","type":"address"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"_eventId","type":"uint256"}],"name":"getEventSaleInfo","outputs":[{"internalType":"uint256","name":"saleStartDate","type":"uint256"},{"internalType":"uint256","name":"saleEndDate","type":"uint256"},{"internalType":"uint256","name":"refundDeadline","type":"uint256"},{"internalType":"bool","name":"isActive","type":"bool"},{"internalType":"bool","name":"isCancelled","type":"bool"},{"internalType":"uint256","name":"totalRevenue","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"_eventId","type":"uint256"}],"name":"getEventTickets","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"_eventId","type":"uint256"},{"internalType":"enum EventTicketNFT.TicketType","name":"_type","type":"uint8"}],"name":"getTicketTypeInfo","outputs":[{"internalType":"string","name":"name","type":"string"},{"internalType":"uint256","name":"price","type":"uint256"},{"internalType":"uint256","name":"totalSupply","type":"uint256"},{"internalType":"uint256","name":"sold","type":"uint256"},{"internalType":"string","name":"benefits","type":"string"},{"internalType":"bool","name":"isActive","type":"bool"}],"stateMutability":"view","type":"function"},
+
+  // View functions - Ticket info
+  {"inputs":[],"name":"getTicketCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"}],"name":"getTicketBasicInfo","outputs":[{"internalType":"uint256","name":"eventId","type":"uint256"},{"internalType":"uint8","name":"ticketType","type":"uint8"},{"internalType":"address","name":"originalBuyer","type":"address"},{"internalType":"uint256","name":"purchaseDate","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"}],"name":"getTicketDetails","outputs":[{"internalType":"uint256","name":"purchasePrice","type":"uint256"},{"internalType":"string","name":"qrCodeHash","type":"string"},{"internalType":"uint8","name":"status","type":"uint8"},{"internalType":"string","name":"seatInfo","type":"string"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"}],"name":"getTransferHistory","outputs":[{"components":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"price","type":"uint256"}],"internalType":"struct EventTicketNFT.TransferHistory[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"address","name":"_user","type":"address"}],"name":"getUserTickets","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},
+
+  // Ticket actions
+  {"inputs":[{"internalType":"uint256","name":"_eventId","type":"uint256"},{"internalType":"enum EventTicketNFT.TicketType","name":"_ticketType","type":"uint8"},{"internalType":"string","name":"_seatInfo","type":"string"}],"name":"purchaseTicket","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"payable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"}],"name":"refundTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"},{"internalType":"address","name":"_buyer","type":"address"}],"name":"resellTicket","outputs":[],"stateMutability":"payable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"},{"internalType":"address","name":"_to","type":"address"}],"name":"transferTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"}],"name":"useTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"string","name":"_qrHash","type":"string"}],"name":"verifyAndUseTicket","outputs":[{"internalType":"bool","name":"success","type":"bool"},{"internalType":"string","name":"message","type":"string"}],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"string","name":"_qrHash","type":"string"}],"name":"verifyTicketByQR","outputs":[{"components":[{"internalType":"bool","name":"isValid","type":"bool"},{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"uint256","name":"eventId","type":"uint256"},{"internalType":"string","name":"eventName","type":"string"},{"internalType":"string","name":"ticketTypeName","type":"string"},{"internalType":"address","name":"currentOwner","type":"address"},{"internalType":"string","name":"message","type":"string"}],"internalType":"struct EventTicketNFT.QRVerifyResult","name":"result","type":"tuple"}],"stateMutability":"view","type":"function"},
+
+  // Ownership & withdrawal
+  {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"withdrawAmount","outputs":[],"stateMutability":"nonpayable","type":"function"},
+
+  // ERC721Enumerable
   {"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"tokenByIndex","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
   {"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"uint256","name":"index","type":"uint256"}],"name":"tokenOfOwnerByIndex","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-  {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"tokenURI","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},
   {"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-  {"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"transferFrom","outputs":[],"stateMutability":"nonpayable","type":"function"}
-];
 
+  // Mappings & other views
+  {"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"eventRefunded","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"eventTickets","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"qrCodeToTicket","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"ticketTransferHistory","outputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"price","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"tickets","outputs":[{"internalType":"uint256","name":"eventId","type":"uint256"},{"internalType":"enum EventTicketNFT.TicketType","name":"ticketType","type":"uint8"},{"internalType":"address","name":"originalBuyer","type":"address"},{"internalType":"uint256","name":"purchaseDate","type":"uint256"},{"internalType":"uint256","name":"purchasePrice","type":"uint256"},{"internalType":"string","name":"qrCodeHash","type":"string"},{"internalType":"enum EventTicketNFT.TicketStatus","name":"status","type":"uint8"},{"internalType":"string","name":"seatInfo","type":"string"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"userTickets","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
+];
 // Ticket Types enum
 export const TicketType = {
   ECONOMY: 0,

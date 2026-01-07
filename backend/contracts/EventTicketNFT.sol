@@ -114,53 +114,78 @@ contract EventTicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Reentranc
         _;
     }
 
+    // ============ STRUCTS FOR PARAMETERS ============
+    
+    struct EventParams {
+        string name;
+        string description;
+        string location;
+        string imageUrl;
+    }
+    
+    struct EventDates {
+        uint256 eventDate;
+        uint256 saleStartDate;
+        uint256 saleEndDate;
+        uint256 refundDeadline;
+    }
+    
+    struct TicketConfig {
+        uint256 price;
+        uint256 supply;
+        string benefits;
+    }
+
     // ============ EVENT MANAGEMENT ============
     
     /**
-     * @dev Tạo sự kiện mới với nhiều loại vé
+     * @dev Tạo sự kiện mới với nhiều loại vé (refactored để giảm stack depth)
      */
     function createEvent(
-        string memory _name,
-        string memory _description,
-        string memory _location,
-        string memory _imageUrl,
-        uint256 _eventDate,
-        uint256 _saleStartDate,
-        uint256 _saleEndDate,
-        uint256 _refundDeadline,
-        uint256[3] memory _ticketPrices,      // [economy, standard, vip]
-        uint256[3] memory _ticketSupplies,    // [economy, standard, vip]
-        string[3] memory _ticketBenefits      // [economy, standard, vip]
+        EventParams calldata _params,
+        EventDates calldata _dates,
+        TicketConfig[3] calldata _tickets
     ) external returns (uint256) {
-        require(bytes(_name).length > 0, "Name required");
-        require(_eventDate > block.timestamp, "Event date must be in future");
-        require(_saleEndDate > _saleStartDate, "Invalid sale period");
-        require(_saleEndDate < _eventDate, "Sale must end before event");
-        require(_refundDeadline <= _saleEndDate, "Invalid refund deadline");
+        require(bytes(_params.name).length > 0, "Name required");
+        require(_dates.eventDate > block.timestamp, "Event date must be in future");
+        require(_dates.saleEndDate > _dates.saleStartDate, "Invalid sale period");
+        require(_dates.saleEndDate < _dates.eventDate, "Sale must end before event");
+        require(_dates.refundDeadline <= _dates.saleEndDate, "Invalid refund deadline");
 
         _eventIdCounter += 1;
-uint256 eventId = _eventIdCounter;
+        uint256 eventId = _eventIdCounter;
 
+        _initEventBasicInfo(eventId, _params);
+        _initEventDates(eventId, _dates);
+        _initEventTickets(eventId, _tickets);
+
+        emit EventCreated(eventId, _params.name, msg.sender);
+        return eventId;
+    }
+    
+    function _initEventBasicInfo(uint256 eventId, EventParams calldata _params) internal {
         Event storage newEvent = events[eventId];
-        newEvent.name = _name;
-        newEvent.description = _description;
-        newEvent.location = _location;
-        newEvent.imageUrl = _imageUrl;
-        newEvent.eventDate = _eventDate;
-        newEvent.saleStartDate = _saleStartDate;
-        newEvent.saleEndDate = _saleEndDate;
-        newEvent.refundDeadline = _refundDeadline;
+        newEvent.name = _params.name;
+        newEvent.description = _params.description;
+        newEvent.location = _params.location;
+        newEvent.imageUrl = _params.imageUrl;
         newEvent.organizer = msg.sender;
         newEvent.isActive = true;
         newEvent.isCancelled = false;
-
-        // Thiết lập các loại vé
-        _setupTicketType(eventId, TicketType.ECONOMY, "Economy", _ticketPrices[0], _ticketSupplies[0], _ticketBenefits[0]);
-        _setupTicketType(eventId, TicketType.STANDARD, "Standard", _ticketPrices[1], _ticketSupplies[1], _ticketBenefits[1]);
-        _setupTicketType(eventId, TicketType.VIP, "VIP", _ticketPrices[2], _ticketSupplies[2], _ticketBenefits[2]);
-
-        emit EventCreated(eventId, _name, msg.sender);
-        return eventId;
+    }
+    
+    function _initEventDates(uint256 eventId, EventDates calldata _dates) internal {
+        Event storage newEvent = events[eventId];
+        newEvent.eventDate = _dates.eventDate;
+        newEvent.saleStartDate = _dates.saleStartDate;
+        newEvent.saleEndDate = _dates.saleEndDate;
+        newEvent.refundDeadline = _dates.refundDeadline;
+    }
+    
+    function _initEventTickets(uint256 eventId, TicketConfig[3] calldata _tickets) internal {
+        _setupTicketType(eventId, TicketType.ECONOMY, "Economy", _tickets[0].price, _tickets[0].supply, _tickets[0].benefits);
+        _setupTicketType(eventId, TicketType.STANDARD, "Standard", _tickets[1].price, _tickets[1].supply, _tickets[1].benefits);
+        _setupTicketType(eventId, TicketType.VIP, "VIP", _tickets[2].price, _tickets[2].supply, _tickets[2].benefits);
     }
 
     function _setupTicketType(
@@ -201,12 +226,12 @@ uint256 eventId = _eventIdCounter;
     // ============ TICKET PURCHASE ============
 
     /**
-     * @dev Mua vé - Mint NFT ticket
+     * @dev Mua vé - Mint NFT ticket (refactored)
      */
     function purchaseTicket(
         uint256 _eventId, 
         TicketType _ticketType,
-        string memory _seatInfo
+        string calldata _seatInfo
     ) external payable nonReentrant eventExists(_eventId) returns (uint256) {
         Event storage evt = events[_eventId];
         
@@ -223,22 +248,10 @@ uint256 eventId = _eventIdCounter;
         _tokenIdCounter += 1;
         uint256 tokenId = _tokenIdCounter;
         
-        // Tạo QR code hash
-        string memory qrHash = _generateQRHash(tokenId, _eventId, msg.sender);
+        // Tạo ticket data
+        _createTicketData(tokenId, _eventId, _ticketType, ticketInfo.price, _seatInfo);
         
-        // Lưu thông tin vé
-        tickets[tokenId] = Ticket({
-            eventId: _eventId,
-            ticketType: _ticketType,
-            originalBuyer: msg.sender,
-            purchaseDate: block.timestamp,
-            purchasePrice: ticketInfo.price,
-            qrCodeHash: qrHash,
-            status: TicketStatus.VALID,
-            seatInfo: _seatInfo
-        });
-
-        qrCodeToTicket[qrHash] = tokenId;
+        // Update counts
         ticketInfo.sold++;
         evt.totalRevenue += ticketInfo.price;
         
@@ -249,19 +262,49 @@ uint256 eventId = _eventIdCounter;
         _safeMint(msg.sender, tokenId);
         _setTokenURI(tokenId, _generateTokenURI(tokenId));
 
+        // Handle payments
+        _handlePayments(_eventId, ticketInfo.price);
+
+        emit TicketPurchased(tokenId, _eventId, msg.sender, _ticketType);
+        return tokenId;
+    }
+    
+    function _createTicketData(
+        uint256 tokenId,
+        uint256 _eventId,
+        TicketType _ticketType,
+        uint256 _price,
+        string calldata _seatInfo
+    ) internal {
+        string memory qrHash = _generateQRHash(tokenId, _eventId, msg.sender);
+        
+        tickets[tokenId] = Ticket({
+            eventId: _eventId,
+            ticketType: _ticketType,
+            originalBuyer: msg.sender,
+            purchaseDate: block.timestamp,
+            purchasePrice: _price,
+            qrCodeHash: qrHash,
+            status: TicketStatus.VALID,
+            seatInfo: _seatInfo
+        });
+
+        qrCodeToTicket[qrHash] = tokenId;
+    }
+    
+    function _handlePayments(uint256 _eventId, uint256 _ticketPrice) internal {
+        Event storage evt = events[_eventId];
+        
         // Chuyển tiền cho organizer (trừ phí nền tảng)
-        uint256 platformFee = (ticketInfo.price * PLATFORM_FEE_PERCENT) / 100;
-        uint256 organizerAmount = ticketInfo.price - platformFee;
+        uint256 platformFee = (_ticketPrice * PLATFORM_FEE_PERCENT) / 100;
+        uint256 organizerAmount = _ticketPrice - platformFee;
         
         payable(evt.organizer).transfer(organizerAmount);
         
         // Hoàn tiền thừa
-        if (msg.value > ticketInfo.price) {
-            payable(msg.sender).transfer(msg.value - ticketInfo.price);
+        if (msg.value > _ticketPrice) {
+            payable(msg.sender).transfer(msg.value - _ticketPrice);
         }
-
-        emit TicketPurchased(tokenId, _eventId, msg.sender, _ticketType);
-        return tokenId;
     }
 
     // ============ TICKET TRANSFER ============
@@ -408,48 +451,59 @@ uint256 eventId = _eventIdCounter;
     // ============ QR CODE VERIFICATION ============
 
     /**
+     * @dev Struct để trả về kết quả xác thực QR
+     */
+    struct QRVerifyResult {
+        bool isValid;
+        uint256 tokenId;
+        uint256 eventId;
+        string eventName;
+        string ticketTypeName;
+        address currentOwner;
+        string message;
+    }
+
+    /**
      * @dev Xác thực vé bằng QR code hash
      */
     function verifyTicketByQR(string memory _qrHash) 
         external 
         view 
-        returns (
-            bool isValid,
-            uint256 tokenId,
-            uint256 eventId,
-            string memory eventName,
-            string memory ticketTypeName,
-            address currentOwner,
-            string memory message
-        ) 
+        returns (QRVerifyResult memory result) 
     {
-        tokenId = qrCodeToTicket[_qrHash];
+        result.tokenId = qrCodeToTicket[_qrHash];
         
-        if (tokenId == 0) {
-            return (false, 0, 0, "", "", address(0), "QR code not found");
+        if (result.tokenId == 0) {
+            result.message = "QR code not found";
+            return result;
         }
 
-        Ticket storage ticket = tickets[tokenId];
+        Ticket storage ticket = tickets[result.tokenId];
         Event storage evt = events[ticket.eventId];
         
-        currentOwner = ownerOf(tokenId);
-        eventId = ticket.eventId;
-        eventName = evt.name;
-        ticketTypeName = evt.ticketTypes[ticket.ticketType].name;
+        result.currentOwner = ownerOf(result.tokenId);
+        result.eventId = ticket.eventId;
+        result.eventName = evt.name;
+        result.ticketTypeName = evt.ticketTypes[ticket.ticketType].name;
 
         if (ticket.status == TicketStatus.USED) {
-            return (false, tokenId, eventId, eventName, ticketTypeName, currentOwner, "Ticket already used");
+            result.message = "Ticket already used";
+            return result;
         }
         
         if (ticket.status == TicketStatus.REFUNDED) {
-            return (false, tokenId, eventId, eventName, ticketTypeName, currentOwner, "Ticket was refunded");
+            result.message = "Ticket was refunded";
+            return result;
         }
         
         if (evt.isCancelled) {
-            return (false, tokenId, eventId, eventName, ticketTypeName, currentOwner, "Event cancelled");
+            result.message = "Event cancelled";
+            return result;
         }
 
-        return (true, tokenId, eventId, eventName, ticketTypeName, currentOwner, "Ticket is valid");
+        result.isValid = true;
+        result.message = "Ticket is valid";
+        return result;
     }
 
     /**
@@ -678,25 +732,45 @@ uint256 eventId = _eventIdCounter;
         Event storage evt = events[ticket.eventId];
         TicketTypeInfo storage ticketInfo = evt.ticketTypes[ticket.ticketType];
 
-        string memory json = string(
+        return string(
+            abi.encodePacked(
+                "data:application/json;base64,",
+                Base64.encode(bytes(_buildTokenJSON(_tokenId, evt, ticketInfo, ticket)))
+            )
+        );
+    }
+    
+    function _buildTokenJSON(
+        uint256 _tokenId,
+        Event storage evt,
+        TicketTypeInfo storage ticketInfo,
+        Ticket storage ticket
+    ) internal view returns (string memory) {
+        return string(
             abi.encodePacked(
                 '{"name": "', evt.name, ' - ', ticketInfo.name, ' Ticket #', Strings.toString(_tokenId), '",',
                 '"description": "', evt.description, '",',
                 '"image": "', evt.imageUrl, '",',
-                '"attributes": [',
-                    '{"trait_type": "Event", "value": "', evt.name, '"},',
-                    '{"trait_type": "Ticket Type", "value": "', ticketInfo.name, '"},',
-                    '{"trait_type": "Location", "value": "', evt.location, '"},',
-                    '{"trait_type": "Seat", "value": "', ticket.seatInfo, '"},',
-                    '{"trait_type": "Benefits", "value": "', ticketInfo.benefits, '"}',
-                ']}'
+                _buildAttributes(evt, ticketInfo, ticket),
+                '}'
             )
         );
-
+    }
+    
+    function _buildAttributes(
+        Event storage evt,
+        TicketTypeInfo storage ticketInfo,
+        Ticket storage ticket
+    ) internal view returns (string memory) {
         return string(
             abi.encodePacked(
-                "data:application/json;base64,",
-                Base64.encode(bytes(json))
+                '"attributes": [',
+                '{"trait_type": "Event", "value": "', evt.name, '"},',
+                '{"trait_type": "Ticket Type", "value": "', ticketInfo.name, '"},',
+                '{"trait_type": "Location", "value": "', evt.location, '"},',
+                '{"trait_type": "Seat", "value": "', ticket.seatInfo, '"},',
+                '{"trait_type": "Benefits", "value": "', ticketInfo.benefits, '"}',
+                ']'
             )
         );
     }

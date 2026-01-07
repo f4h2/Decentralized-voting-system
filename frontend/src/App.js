@@ -12,7 +12,7 @@ function App() {
 
   // Contract address - CẬP NHẬT SAU KHI DEPLOY CONTRACT MỚI
   // const CONTRACT_ADDRESS = "0x9a4219024594fEdACFBdFEb009321E3a2341f52F"; // Thay bằng địa chỉ contract EventTicketNFT mới
-  const CONTRACT_ADDRESS = "0x84a68edc03ba3a4a8fa4438bc066083b9bc02393";
+  const CONTRACT_ADDRESS = "0xeFB649042d97E2F56B5DfBc569b24e4132602c55";
   const { contract } = useContract(CONTRACT_ADDRESS, EventTicketNFTABI);
   // const { contract } = useContract(CONTRACT_ADDRESS);
 
@@ -110,7 +110,9 @@ function App() {
         
         for (let i = 1; i <= eventCountNum; i++) {
           try {
-            const eventData = await contract.call("getEvent", [i]);
+            // Gọi 2 hàm riêng để lấy thông tin event
+            const basicInfo = await contract.call("getEventBasicInfo", [i]);
+            const saleInfo = await contract.call("getEventSaleInfo", [i]);
             
             // Load ticket type info for each type
             const ticketTypes = [];
@@ -132,21 +134,23 @@ function App() {
             
             eventList.push({ 
               id: i, 
-              name: eventData[0],
-              description: eventData[1],
-              location: eventData[2],
-              imageUrl: eventData[3],
-              eventDate: eventData[4],
-              saleStartDate: eventData[5],
-              saleEndDate: eventData[6],
-              refundDeadline: eventData[7],
-              organizer: eventData[8],
-              isActive: eventData[9],
-              isCancelled: eventData[10],
-              totalRevenue: eventData[11],
+              // Basic info
+              name: basicInfo[0],
+              description: basicInfo[1],
+              location: basicInfo[2],
+              imageUrl: basicInfo[3],
+              eventDate: basicInfo[4],
+              organizer: basicInfo[5],
+              // Sale info
+              saleStartDate: saleInfo[0],
+              saleEndDate: saleInfo[1],
+              refundDeadline: saleInfo[2],
+              isActive: saleInfo[3],
+              isCancelled: saleInfo[4],
+              totalRevenue: saleInfo[5],
               ticketTypes
             });
-            console.log(`✅ Event ${i} loaded:`, eventData[0]);
+            console.log(`✅ Event ${i} loaded:`, basicInfo[0]);
           } catch (error) {
             console.error(`❌ Error fetching event ${i}:`, error);
           }
@@ -175,8 +179,13 @@ function App() {
           
           for (let ticketId of ticketIds) {
             try {
-              const ticketData = await contract.call("getTicket", [ticketId]);
-              const eventData = await contract.call("getEvent", [ticketData[0]]);
+              // Gọi 2 hàm riêng để lấy thông tin ticket
+              const ticketBasic = await contract.call("getTicketBasicInfo", [ticketId]);
+              const ticketDetails = await contract.call("getTicketDetails", [ticketId]);
+              
+              // Gọi 2 hàm riêng để lấy thông tin event
+              const eventBasic = await contract.call("getEventBasicInfo", [ticketBasic[0]]);
+              const eventSale = await contract.call("getEventSaleInfo", [ticketBasic[0]]);
               
               // Get transfer history
               let transferHistory = [];
@@ -188,20 +197,23 @@ function App() {
               
               ticketList.push({ 
                 tokenId: Number(ticketId),
-                eventId: Number(ticketData[0]),
-                ticketType: Number(ticketData[1]),
-                originalBuyer: ticketData[2],
-                purchaseDate: ticketData[3],
-                purchasePrice: ticketData[4],
-                qrCodeHash: ticketData[5],
-                status: Number(ticketData[6]),
-                seatInfo: ticketData[7],
-                eventName: eventData[0],
-                eventDate: eventData[4],
-                eventLocation: eventData[2],
-                eventImageUrl: eventData[3],
-                isCancelled: eventData[10],
-                refundDeadline: eventData[7],
+                // Ticket basic info
+                eventId: Number(ticketBasic[0]),
+                ticketType: Number(ticketBasic[1]),
+                originalBuyer: ticketBasic[2],
+                purchaseDate: ticketBasic[3],
+                // Ticket details
+                purchasePrice: ticketDetails[0],
+                qrCodeHash: ticketDetails[1],
+                status: Number(ticketDetails[2]),
+                seatInfo: ticketDetails[3],
+                // Event info
+                eventName: eventBasic[0],
+                eventDate: eventBasic[4],
+                eventLocation: eventBasic[2],
+                eventImageUrl: eventBasic[3],
+                isCancelled: eventSale[4],
+                refundDeadline: eventSale[2],
                 transferHistory
               });
             } catch (e) {
@@ -266,19 +278,28 @@ function App() {
         ticketSupplies
       });
 
-      await contract.call("createEvent", [
-        eventForm.name,
-        eventForm.description || "Sự kiện đặc biệt",
-        eventForm.location || "Chưa xác định",
-        eventForm.imageUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800",
-        eventDateTimestamp,
-        saleStartTimestamp,
-        saleEndTimestamp,
-        refundDeadlineTimestamp,
-        ticketPrices,
-        ticketSupplies,
-        ticketBenefits
-      ]);
+      // New contract signature uses structs
+      const params = {
+        name: eventForm.name,
+        description: eventForm.description || "Sự kiện đặc biệt",
+        location: eventForm.location || "Chưa xác định",
+        imageUrl: eventForm.imageUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800"
+      };
+
+      const dates = {
+        eventDate: eventDateTimestamp,
+        saleStartDate: saleStartTimestamp,
+        saleEndDate: saleEndTimestamp,
+        refundDeadline: refundDeadlineTimestamp
+      };
+
+      const tickets = [
+        { price: ticketPrices[0], supply: ticketSupplies[0], benefits: ticketBenefits[0] },
+        { price: ticketPrices[1], supply: ticketSupplies[1], benefits: ticketBenefits[1] },
+        { price: ticketPrices[2], supply: ticketSupplies[2], benefits: ticketBenefits[2] }
+      ];
+
+      await contract.call("createEvent", [params, dates, tickets]);
 
       showNotification('✅ Tạo sự kiện thành công!', 'success');
       setEventForm({
