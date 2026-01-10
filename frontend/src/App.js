@@ -4,10 +4,11 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import './App.css';
 import { EventTicketABI } from './abi';
-
 function App() {
   const address = useAddress();
-  const { contract } = useContract("0xFE986Fc37a11eEA9BB41E76E0Ea48c2048764814", EventTicketABI);
+  const { contract } = useContract("0xFE986Fc37a11eEA9BB41E76E0Ea48c2048764814",EventTicketABI);
+  // const { contract } = useContract("0xFE986Fc37a11eEA9BB41E76E0Ea48c2048764814");
+
   // const { contract } = useContract("0xFE986Fc37a11eEA9BB41E76E0Ea48c2048764814"); // EventTicket contract deployed on Sepolia
   // const { contract } = useContract("0x2B66A1911EC205c88897346a0741A19C633A6240"); 
   // State management
