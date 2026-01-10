@@ -3,10 +3,12 @@ import { useAddress, useContract } from '@thirdweb-dev/react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import './App.css';
+import { EventTicketABI } from './abi';
 
 function App() {
   const address = useAddress();
-  const { contract } = useContract("0xFE986Fc37a11eEA9BB41E76E0Ea48c2048764814"); // EventTicket contract deployed on Sepolia
+  const { contract } = useContract("0xFE986Fc37a11eEA9BB41E76E0Ea48c2048764814", EventTicketABI);
+  // const { contract } = useContract("0xFE986Fc37a11eEA9BB41E76E0Ea48c2048764814"); // EventTicket contract deployed on Sepolia
   // const { contract } = useContract("0x2B66A1911EC205c88897346a0741A19C633A6240"); 
   // State management
   const [activeTab, setActiveTab] = useState('events'); // 'events', 'my-tickets', 'admin'
@@ -57,43 +59,43 @@ function App() {
   }, []);
 
   // Load all events
-  useEffect(() => {
-    if (contract) {
-      const fetchEvents = async () => {
-        try {
-          setLoading(true);
-          console.log("📚 Fetching eventCount...");
-          const count = await contract.call("eventCount", []);
-          console.log("📊 EventCount:", count?.toString());
-          
-          const eventList = [];
-          const eventCountNum = Number(count) || 0;
-          
-          for (let i = 1; i <= eventCountNum; i++) {
-            try {
-              const eventData = await contract.call("getEvent", [i]);
-              console.log(`✅ Event ${i} loaded:`, eventData[0]);
-              eventList.push({ id: i, ...eventData });
-            } catch (error) {
-              console.error(`❌ Error fetching event ${i}:`, error);
-            }
-          }
-          console.log(`✅ Total ${eventList.length} events loaded`);
-          setEvents(eventList);
-        } catch (error) {
-          console.error("❌ Error fetching events:", error);
-          setEvents([]);
-        } finally {
-          setLoading(false);
-        }
-      };
-      
-      fetchEvents();
-      // Reload events every 30 seconds
-      const interval = setInterval(fetchEvents, 30000);
-      return () => clearInterval(interval);
+useEffect(() => {
+  if (!contract) {
+    console.error("Contract is not loaded yet");
+    return;
+  }
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      const count = await contract.call("eventCount"); // hoặc "getEventCount" nếu có
+      console.log("📊 EventCount:", count?.toString());
+	  
+      const eventList = [];
+	  const eventCountNum = Number(count) || 0;
+	  
+	  for (let i = 1; i <= eventCountNum; i++) {
+	    try {
+	      const eventData = await contract.call("getEvent", [i]);
+	      console.log(`✅ Event ${i} loaded:`, eventData[0]);
+	      eventList.push({ id: i, ...eventData });
+	    } catch (error) {
+	      console.error(`❌ Error fetching event ${i}:`, error);
+	    }
+	  }
+	  console.log(`✅ Total ${eventList.length} events loaded`);
+	  setEvents(eventList);
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setLoading(false);
     }
-  }, [contract]);
+  };
+
+  fetchEvents();
+  const interval = setInterval(fetchEvents, 30000);
+  return () => clearInterval(interval);
+}, [contract]);
 
   // Load user's tickets
   useEffect(() => {
