@@ -131,7 +131,10 @@ contract EventTicket {
         userTickets[msg.sender].push(ticketCount);
         eventTickets[_eventId].push(ticketCount);
 
-        // Refund excess payment
+        // Transfer ticket price to event organizer
+        payable(evt.organizer).transfer(evt.ticketPrice);
+
+        // Refund excess payment to buyer
         if (msg.value > evt.ticketPrice) {
             payable(msg.sender).transfer(msg.value - evt.ticketPrice);
         }

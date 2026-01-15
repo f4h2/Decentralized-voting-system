@@ -6,8 +6,11 @@ import './App.css';
 import { EventTicketABI } from './abi';
 function App() {
   const address = useAddress();
-  const { contract } = useContract("0xFE986Fc37a11eEA9BB41E76E0Ea48c2048764814",EventTicketABI);
-  // const { contract } = useContract("0xFE986Fc37a11eEA9BB41E76E0Ea48c2048764814");
+
+// Lỗi "Function 'createEvent' not found in contract. Check your dashboard for the list of functions available" thường xuất hiện khi bạn đang tương tác với smart contract (qua web3.js, ethers.js, Wagmi, hoặc dApp frontend), nhưng hàm createEvent không tồn tại trong ABI (Application Binary Interface) mà code của bạn đang sử dụng, hoặc contract chưa được verify đúng cách trên explorer → explorer không hiển thị danh sách functions.
+
+  // const { contract } = useContract("0xFE986Fc37a11eEA9BB41E76E0Ea48c2048764814",EventTicketABI);
+  const { contract } = useContract("0x9a4219024594fEdACFBdFEb009321E3a2341f52F", EventTicketABI);
 
   // const { contract } = useContract("0xFE986Fc37a11eEA9BB41E76E0Ea48c2048764814"); // EventTicket contract deployed on Sepolia
   // const { contract } = useContract("0x2B66A1911EC205c88897346a0741A19C633A6240"); 
@@ -139,6 +142,8 @@ useEffect(() => {
         : eventDateTimestamp - 3600; // 1 hour before event
 
       const ticketPriceWei = (parseFloat(eventForm.ticketPrice) * 1e18).toString();
+      // const ticketPriceWei = ethers.parseEther(eventForm.ticketPrice || "0.001"); // Ví dụ: chuyển từ ETH sang wei
+
 
       console.log("📝 Creating event with params:", {
         name: eventForm.name,
