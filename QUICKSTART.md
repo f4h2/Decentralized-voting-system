@@ -1,8 +1,16 @@
-# 🚀 Quick Start Guide - EventTicket DApp
+# 🚀 Quick Start Guide - EventTicket NFT DApp
 
-## ⚡ Cài đặt nhanh (5 phút)
+## ⚡ Cài đặt nhanh (10 phút)
 
-### Bước 1: Clone và Install
+### 📋 Yêu cầu
+- Node.js >= 18
+- MetaMask với Sepolia ETH
+- Infura API Key
+
+---
+
+## 🔧 Bước 1: Clone & Install
+
 ```bash
 # Backend
 cd backend
@@ -13,85 +21,148 @@ cd ../frontend
 npm install --legacy-peer-deps
 ```
 
-### Bước 2: Cấu hình
+---
+
+## 🔑 Bước 2: Cấu hình Environment
+
 ```bash
-# Tạo file .env trong backend
+# Tạo file .env trong thư mục backend
 cd backend
-echo "INFURA_API_KEY=your_key" > .env
-echo "METAMASK_PRIVATE_KEY=your_private_key" >> .env
 ```
 
-### Bước 3: Deploy Contract
+Tạo file `.env` với nội dung:
+```env
+INFURA_API_KEY=your_infura_api_key
+METAMASK_PRIVATE_KEY=your_wallet_private_key
+```
+
+📌 **Lấy keys:**
+- Infura: https://app.infura.io
+- MetaMask: Account → Export Private Key (⚠️ Chỉ dùng ví testnet!)
+
+---
+
+## 📦 Bước 3: Compile & Deploy
+
 ```bash
 cd backend
+
+# Clean build cũ
 npx hardhat clean
-rm -rf ignition/deployments/chain-11155111
+
+# Compile
 npx hardhat compile
-npx hardhat ignition deploy ignition/modules/EventTicket.ts --network sepolia
-# Lưu lại contract address!
+
+# Deploy lên Sepolia
+npx hardhat ignition deploy ignition/modules/EventTicketNFT.ts --network sepolia
 ```
 
-### Bước 4: Cập nhật Frontend
+📌 **LƯU LẠI ĐỊA CHỈ CONTRACT!**
+
+---
+
+## ✏️ Bước 4: Cập nhật Frontend
+
+Mở `frontend/src/App.js`, sửa dòng 8:
+
 ```javascript
-// Sửa frontend/src/App.js dòng 9
-const { contract } = useContract("YOUR_CONTRACT_ADDRESS");
+const CONTRACT_ADDRESS = "YOUR_NEW_CONTRACT_ADDRESS";
 ```
 
-### Bước 5: Chạy
+---
+
+## ▶️ Bước 5: Chạy
+
 ```bash
 cd frontend
 npm start
 ```
 
+🌐 Mở http://localhost:3000
+
+---
+
 ## 🎯 Demo nhanh
 
-### Tạo sự kiện (Ai cũng được)
-1. Kết nối ví bất kỳ
-2. Tab "➕ Tạo sự kiện" → "📝 Điền thông tin"
-3. Điền form:
-   - Tên: "Concert 2026"
-   - Giá vé: 0.001 ETH
-   - Số vé: 100
-   - Ngày: Chọn ngày tương lai
-4. Click "🚀 Tạo sự kiện"
+### Tạo sự kiện
+1. Kết nối ví MetaMask (Sepolia)
+2. Tab **"➕ Tạo sự kiện"** → **"📝 Điền thông tin"**
+3. Điền:
+   - Tên: "Concert ABC 2026"
+   - Ngày sự kiện: Chọn ngày tương lai
+   - Ngày kết thúc bán vé: Trước ngày sự kiện
+   - **Economy**: Giá 0.01 ETH, SL: 100
+   - **Standard**: Giá 0.05 ETH, SL: 50
+   - **VIP**: Giá 0.1 ETH, SL: 20
+4. Click **"🚀 Tạo sự kiện"**
 
-### Mua vé (Ai cũng được)
-1. Kết nối ví bất kỳ
-2. Tab "🎪 Sự kiện"
-3. Chọn sự kiện → "🎫 Mua vé"
-4. Xác nhận MetaMask
+### Mua vé NFT
+1. Tab **"🎪 Sự kiện"**
+2. Chọn sự kiện → **"Chi tiết"**
+3. Chọn loại vé (Economy/Standard/VIP)
+4. Click **"🎫 Mua vé"**
+5. Confirm MetaMask
 
-### Xem vé
-Tab "🎟️ Vé của tôi" → Xem mã vé
+### Xem vé & QR
+1. Tab **"🎟️ Vé NFT của tôi"**
+2. Click vào QR để phóng to
 
-## 📱 Test Account
+### Chuyển nhượng vé
+1. Trên vé, click **"🔄 Chuyển nhượng"**
+2. Nhập địa chỉ người nhận
+3. Confirm
 
-Để test nhanh, bạn cần:
-- Ít nhất 1 ví MetaMask
-- Kết nối ví → Tạo event → Mua vé
+### Hoàn vé
+1. Trên vé, click **"💰 Hoàn vé"**
+2. Xem số tiền hoàn (95% hoặc 100%)
+3. Confirm để nhận ETH
 
-## 🔑 Commands cheatsheet
+---
+
+## 🔑 Commands Cheatsheet
 
 ```bash
-# Compile
+# Compile contract
 npx hardhat compile
 
-# Test
-npx hardhat test
+# Run tests
+npx hardhat test test/EventTicketNFT.ts
 
-# Deploy
-npx hardhat ignition deploy ignition/modules/EventTicket.ts --network sepolia
-
-# Run frontend
-cd frontend && npm start
+# Deploy to Sepolia
+npx hardhat ignition deploy ignition/modules/EventTicketNFT.ts --network sepolia
 
 # Clean build
 npx hardhat clean
+
+# Run frontend
+cd frontend && npm start
 ```
 
-## 💰 Lấy test ETH
+---
+
+## 💰 Lấy Test ETH (Sepolia)
+
 - https://sepoliafaucet.com/
 - https://www.infura.io/faucet/sepolia
+- https://www.alchemy.com/faucets/ethereum-sepolia
 
 ---
-**Có vấn đề?** Đọc EVENTTICKET_README.md để biết chi tiết!
+
+## ❗ Troubleshooting
+
+| Vấn đề | Giải pháp |
+|--------|-----------|
+| Thiếu ETH | Lấy từ faucet |
+| Contract not found | Kiểm tra địa chỉ trong App.js |
+| MetaMask reject | Đổi sang Sepolia network |
+| npm install lỗi | Thêm `--legacy-peer-deps` |
+
+---
+
+## 📚 Tài liệu đầy đủ
+
+Xem **README.md** để biết chi tiết!
+
+---
+
+**🎉 Happy Building!**

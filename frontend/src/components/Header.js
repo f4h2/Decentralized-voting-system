@@ -9,14 +9,16 @@ const Header = ({ address, isAdmin }) => {
         <div className="logo-section">
           <div className="logo-icon">🎫</div>
           <div className="logo-text">
-            <h1>EventTicket DApp</h1>
-            <p className="subtitle">Hệ thống mua vé sự kiện trên Blockchain</p>
+            <h1>EventTicket NFT DApp</h1>
+            <p className="subtitle">Hệ thống vé sự kiện NFT trên Blockchain</p>
           </div>
+          <span className="nft-tag">NFT</span>
         </div>
         
         <nav className="header-nav">
           <a href="#events" className="nav-link">🎪 Sự kiện</a>
-          <a href="#my-tickets" className="nav-link">🎟️ Vé của tôi</a>
+          <a href="#my-tickets" className="nav-link">🎟️ Vé NFT</a>
+          <a href="#verify" className="nav-link">📱 Xác thực QR</a>
           <a href="#create" className="nav-link">➕ Tạo sự kiện</a>
         </nav>
 
