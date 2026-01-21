@@ -2,9 +2,6 @@
   "name": "backend",
   "version": "1.0.0",
   "type": "module",
-  "dependencies": {
-    "@openzeppelin/contracts": "^5.0.0"
-  },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^3.0.6",
     "@nomicfoundation/hardhat-ignition-viem": "^3.0.6",
@@ -15,5 +12,8 @@
     "hardhat": "^3.1.0",
     "typescript": "~5.8.0",
     "viem": "^2.43.1"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0"
   }
 }

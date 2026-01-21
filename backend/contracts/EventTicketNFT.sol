@@ -4,9 +4,8 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 
@@ -20,12 +19,10 @@ import "@openzeppelin/contracts/utils/Base64.sol";
  * - Xác thực vé bằng QR Code
  */
 contract EventTicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, ReentrancyGuard, Ownable {
-    using Counters for Counters.Counter;
-    using Strings for uint256;
+  using Strings for uint256;
+  uint256 private _tokenIdCounter;
+  uint256 private _eventIdCounter;
 
-    // ============ COUNTERS ============
-    Counters.Counter private _tokenIdCounter;
-    Counters.Counter private _eventIdCounter;
 
     // ============ ENUMS ============
     enum TicketType { ECONOMY, STANDARD, VIP }
@@ -103,7 +100,7 @@ contract EventTicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Reentranc
 
     // ============ MODIFIERS ============
     modifier eventExists(uint256 _eventId) {
-        require(_eventId > 0 && _eventId <= _eventIdCounter.current(), "Event does not exist");
+        require(_eventId > 0 && _eventId <= _eventIdCounter, "Event does not exist");
         _;
     }
 
@@ -113,7 +110,7 @@ contract EventTicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Reentranc
     }
 
     modifier ticketExists(uint256 _tokenId) {
-        require(_tokenId > 0 && _tokenId <= _tokenIdCounter.current(), "Ticket does not exist");
+        require(_tokenId > 0 && _tokenId <= _tokenIdCounter, "Ticket does not exist");
         _;
     }
 
@@ -141,8 +138,8 @@ contract EventTicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Reentranc
         require(_saleEndDate < _eventDate, "Sale must end before event");
         require(_refundDeadline <= _saleEndDate, "Invalid refund deadline");
 
-        _eventIdCounter.increment();
-        uint256 eventId = _eventIdCounter.current();
+        _eventIdCounter += 1;
+uint256 eventId = _eventIdCounter;
 
         Event storage newEvent = events[eventId];
         newEvent.name = _name;
@@ -223,8 +220,8 @@ contract EventTicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Reentranc
         require(msg.value >= ticketInfo.price, "Insufficient payment");
 
         // Mint NFT
-        _tokenIdCounter.increment();
-        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter += 1;
+        uint256 tokenId = _tokenIdCounter;
         
         // Tạo QR code hash
         string memory qrHash = _generateQRHash(tokenId, _eventId, msg.sender);
@@ -618,11 +615,11 @@ contract EventTicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Reentranc
     }
 
     function getEventCount() external view returns (uint256) {
-        return _eventIdCounter.current();
+        return _eventIdCounter;
     }
 
     function getTicketCount() external view returns (uint256) {
-        return _tokenIdCounter.current();
+        return _tokenIdCounter;
     }
 
     function getContractBalance() external view returns (uint256) {
@@ -659,7 +656,7 @@ contract EventTicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Reentranc
 
         string memory json = string(
             abi.encodePacked(
-                '{"name": "', evt.name, ' - ', ticketInfo.name, ' Ticket #', _tokenId.toString(), '",',
+                '{"name": "', evt.name, ' - ', ticketInfo.name, ' Ticket #', Strings.toString(_tokenId), '",',
                 '"description": "', evt.description, '",',
                 '"image": "', evt.imageUrl, '",',
                 '"attributes": [',
