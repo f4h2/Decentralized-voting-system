@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAddress, useContract } from '@thirdweb-dev/react';
+import { CONTRACT_ADDRESSES, useAddress, useContract } from '@thirdweb-dev/react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import Header from './components/Header';
@@ -11,8 +11,10 @@ function App() {
   const address = useAddress();
 
   // Contract address - CẬP NHẬT SAU KHI DEPLOY CONTRACT MỚI
-  const CONTRACT_ADDRESS = "0x9a4219024594fEdACFBdFEb009321E3a2341f52F"; // Thay bằng địa chỉ contract EventTicketNFT mới
+  // const CONTRACT_ADDRESS = "0x9a4219024594fEdACFBdFEb009321E3a2341f52F"; // Thay bằng địa chỉ contract EventTicketNFT mới
+  const CONTRACT_ADDRESS = "0x84a68edc03ba3a4a8fa4438bc066083b9bc02393";
   const { contract } = useContract(CONTRACT_ADDRESS, EventTicketNFTABI);
+  // const { contract } = useContract(CONTRACT_ADDRESS);
 
   // State management
   const [activeTab, setActiveTab] = useState('events');

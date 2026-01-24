@@ -521,7 +521,7 @@ uint256 eventId = _eventIdCounter;
 
     // ============ VIEW FUNCTIONS ============
 
-    function getEvent(uint256 _eventId) 
+    function getEventBasicInfo(uint256 _eventId) 
         external 
         view 
         eventExists(_eventId) 
@@ -531,13 +531,7 @@ uint256 eventId = _eventIdCounter;
             string memory location,
             string memory imageUrl,
             uint256 eventDate,
-            uint256 saleStartDate,
-            uint256 saleEndDate,
-            uint256 refundDeadline,
-            address organizer,
-            bool isActive,
-            bool isCancelled,
-            uint256 totalRevenue
+            address organizer
         ) 
     {
         Event storage evt = events[_eventId];
@@ -547,10 +541,28 @@ uint256 eventId = _eventIdCounter;
             evt.location,
             evt.imageUrl,
             evt.eventDate,
+            evt.organizer
+        );
+    }
+
+    function getEventSaleInfo(uint256 _eventId) 
+        external 
+        view 
+        eventExists(_eventId) 
+        returns (
+            uint256 saleStartDate,
+            uint256 saleEndDate,
+            uint256 refundDeadline,
+            bool isActive,
+            bool isCancelled,
+            uint256 totalRevenue
+        ) 
+    {
+        Event storage evt = events[_eventId];
+        return (
             evt.saleStartDate,
             evt.saleEndDate,
             evt.refundDeadline,
-            evt.organizer,
             evt.isActive,
             evt.isCancelled,
             evt.totalRevenue
@@ -574,7 +586,7 @@ uint256 eventId = _eventIdCounter;
         return (info.name, info.price, info.totalSupply, info.sold, info.benefits, info.isActive);
     }
 
-    function getTicket(uint256 _tokenId) 
+    function getTicketBasicInfo(uint256 _tokenId) 
         external 
         view 
         ticketExists(_tokenId) 
@@ -582,7 +594,23 @@ uint256 eventId = _eventIdCounter;
             uint256 eventId,
             uint8 ticketType,
             address originalBuyer,
-            uint256 purchaseDate,
+            uint256 purchaseDate
+        ) 
+    {
+        Ticket storage ticket = tickets[_tokenId];
+        return (
+            ticket.eventId,
+            uint8(ticket.ticketType),
+            ticket.originalBuyer,
+            ticket.purchaseDate
+        );
+    }
+
+    function getTicketDetails(uint256 _tokenId) 
+        external 
+        view 
+        ticketExists(_tokenId) 
+        returns (
             uint256 purchasePrice,
             string memory qrCodeHash,
             uint8 status,
@@ -591,10 +619,6 @@ uint256 eventId = _eventIdCounter;
     {
         Ticket storage ticket = tickets[_tokenId];
         return (
-            ticket.eventId,
-            uint8(ticket.ticketType),
-            ticket.originalBuyer,
-            ticket.purchaseDate,
             ticket.purchasePrice,
             ticket.qrCodeHash,
             uint8(ticket.status),
