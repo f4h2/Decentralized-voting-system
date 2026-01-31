@@ -88,33 +88,6 @@ const CONTRACT_ADDRESS = "YOUR_NEW_CONTRACT_ADDRESS";
 
 ## ▶️ Bước 5: Chạy
 
-=======
-### Bước 2: Cấu hình
-```bash
-# Tạo file .env trong backend
-cd backend
-echo "INFURA_API_KEY=your_key" > .env
-echo "METAMASK_PRIVATE_KEY=your_private_key" >> .env
-```
-
-### Bước 3: Deploy Contract
-```bash
-cd backend
-npx hardhat clean
-rm -rf ignition/deployments/chain-11155111
-npx hardhat compile
-npx hardhat ignition deploy ignition/modules/EventTicket.ts --network sepolia
-# Lưu lại contract address!
-```
-
-### Bước 4: Cập nhật Frontend
-```javascript
-// Sửa frontend/src/App.js dòng 9
-const { contract } = useContract("YOUR_CONTRACT_ADDRESS");
-```
-
-### Bước 5: Chạy
->>>>>>> 421385c (xxxx)
 ```bash
 cd frontend
 npm start
